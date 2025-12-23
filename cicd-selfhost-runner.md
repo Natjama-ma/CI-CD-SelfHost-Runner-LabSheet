@@ -1150,6 +1150,9 @@ watch -n 10 ./monitor.sh
 บันทึกรูปผลการรันคำสั่ง
 ```
 
+<img width="1919" height="992" alt="image" src="https://github.com/user-attachments/assets/2430bcea-d36b-4c75-b335-5a933bce41a6" />
+
+
 ## สรุปจุดสำคัญ
 
 ### ✅ ข้อสำคัญสำหรับ Production
