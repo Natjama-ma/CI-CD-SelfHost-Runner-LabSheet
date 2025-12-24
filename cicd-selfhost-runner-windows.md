@@ -1,11 +1,46 @@
- # ใบงาน: การ Deploy แอปพลิเคชันด้วย GitHub Actions และ Self-Hosted Runner
+# ใบงาน: การ Deploy แอปพลิเคชันด้วย GitHub Actions และ Self-Hosted Runner (Windows)
+
+## 🪟 สำหรับระบบปฏิบัติการ Windows
+
+> 📌 **หมายเหตุ:** ใบงานนี้ปรับให้เหมาะสำหรับ Windows โดยเฉพาะ ใช้ PowerShell และ Git Bash
+
+---
+
 ## วัตถุประสงค์
 
 1. อธิบายหลักการทำงานของ Self-Hosted Runner แบบ Pull-based Model ได้
-2. ติดตั้งและกำหนดค่า Self-Hosted Runner บนเครื่อง local ได้
+2. ติดตั้งและกำหนดค่า Self-Hosted Runner บนเครื่อง Windows ได้
 3. อธิบายกระบวนการ Polling และการสื่อสารระหว่าง Runner กับ GitHub ได้
 4. สร้าง CI/CD Pipeline สำหรับ Deploy แอปพลิเคชันไปยัง on-premise server ได้
 5. ตั้งค่า Reverse Proxy ด้วย Nginx สำหรับ Production Environment ได้
+
+---
+
+## ⚙️ ความต้องการของระบบ (Prerequisites)
+
+### ซอฟต์แวร์ที่ต้องติดตั้ง:
+
+1. **Git for Windows** (รวม Git Bash)
+   - ดาวน์โหลด: https://git-scm.com/download/win
+   - ✅ ติดตั้งพร้อม Git Bash option
+
+2. **Node.js** (LTS version)
+   - ดาวน์โหลด: https://nodejs.org/
+   - แนะนำ: v18 หรือ v20
+
+3. **Docker Desktop for Windows**
+   - ดาวน์โหลด: https://www.docker.com/products/docker-desktop
+   - ✅ Enable WSL 2 backend (แนะนำ)
+
+4. **PowerShell 7+** (แนะนำ)
+   - ดาวน์โหลด: https://github.com/PowerShell/PowerShell/releases
+   - หรือใช้ Windows PowerShell ที่มีอยู่แล้ว
+
+5. **Text Editor**
+   - Visual Studio Code (แนะนำ): https://code.visualstudio.com/
+   - หรือ Notepad++
+
+---
 
 ## ทฤษฎีที่เกี่ยวข้อง
 
@@ -48,8 +83,8 @@ Self-Hosted Runner คือเครื่อง server ที่เราต�
                           │     or "No jobs yet"
                           ▼
                   ┌─────────────────────┐
-                  │   Self-Hosted       │ ← Runs on Your Local Machine
-                  │      Runner         │   (Windows/Mac/Linux)
+                  │   Self-Hosted       │ ← Runs on Windows PC
+                  │      Runner         │   (Your Local Machine)
                   │   (Agent Process)   │
                   └─────────────────────┘
                           │
@@ -110,8 +145,8 @@ while (runner.isActive) {
     },
     body: JSON.stringify({
       runnerId: 'runner-12345',
-      runnerName: 'my-local-runner',
-      labels: ['self-hosted', 'macOS', 'X64'],
+      runnerName: 'my-windows-runner',
+      labels: ['self-hosted', 'Windows', 'X64'],
       timeout: 60  // Long-polling timeout
     })
   });
@@ -149,6 +184,8 @@ while (runner.isActive) {
 
 #### 1.2 Clone Repository มาที่เครื่อง Local
 
+เปิด **Git Bash** และรันคำสั่ง:
+
 ```bash
 # Clone repository
 git clone https://github.com/YOUR_USERNAME/nodejs-cicd-selfhosted.git
@@ -158,6 +195,8 @@ cd nodejs-cicd-selfhosted
 ```
 
 #### 1.3 สร้างโครงสร้างโปรเจค
+
+**ใช้ Git Bash เพื่อรันคำสั่งสร้างไฟล์ หรือใช้ VS Code สร้างทีละไฟล์** 
 
 ```bash
 # สร้างโฟลเดอร์และไฟล์
@@ -173,15 +212,21 @@ touch .gitignore
 touch .dockerignore
 ```
 
+
+
+---
+
 ### ส่วนที่ 2: สร้าง Node.js Application
 
 #### 2.1 สร้างไฟล์ package.json
+
+**เปิดไฟล์ `package.json` ด้วย VS Code หรือ Notepad++ แล้ววางโค้ดนี้:**
 
 ```json
 {
   "name": "nodejs-cicd-selfhosted",
   "version": "1.0.0",
-  "description": "CI/CD Demo with Self-Hosted GitHub Actions Runner",
+  "description": "CI/CD Demo with Self-Hosted GitHub Actions Runner on Windows",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -192,7 +237,8 @@ touch .dockerignore
     "cicd",
     "docker",
     "self-hosted",
-    "github-actions"
+    "github-actions",
+    "windows"
   ],
   "author": "",
   "license": "MIT",
@@ -209,11 +255,22 @@ touch .dockerignore
 
 > 🔑 **Critical:** ไฟล์นี้จำเป็นสำหรับการใช้ `npm ci` ใน production
 
+**ใช้ Git Bash หรือ PowerShell:**
+
 ```bash
 # ติดตั้ง dependencies และสร้าง package-lock.json
 npm install
 
 # ตรวจสอบว่ามีไฟล์แล้ว
+```
+
+**ตรวจสอบใน PowerShell:**
+```powershell
+Get-ChildItem | Where-Object { $_.Name -like "*package-lock.json*" }
+```
+
+**ตรวจสอบใน Git Bash:**
+```bash
 ls -la | grep package-lock.json
 ```
 
@@ -223,6 +280,8 @@ ls -la | grep package-lock.json
 ```
 
 #### 2.3 สร้าง server.js
+
+**เปิดไฟล์ `server.js` แล้ววางโค้ดนี้:**
 
 ```js
 const express = require('express');
@@ -236,11 +295,12 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.get('/', (req, res) => {
   res.json({
-    message: '🚀 Hello from Self-Hosted CI/CD!',
+    message: '🚀 Hello from Self-Hosted CI/CD on Windows!',
     version: process.env.VERSION || '1.0.0',
     environment: process.env.NODE_ENV || 'development',
+    platform: process.platform,
     timestamp: new Date().toISOString(),
-    deployment: 'Pull-based Runner Architecture'
+    deployment: 'Pull-based Runner Architecture (Windows)'
   });
 });
 
@@ -248,16 +308,18 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
     uptime: Math.floor(process.uptime()),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    platform: process.platform
   });
 });
 
 app.get('/api/info', (req, res) => {
   res.json({
-    app: 'Node.js CI/CD Demo',
+    app: 'Node.js CI/CD Demo (Windows)',
     version: process.env.VERSION || '1.0.0',
     node: process.version,
     platform: process.platform,
+    arch: process.arch,
     memory: {
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB'
@@ -287,16 +349,20 @@ app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📦 Version: ${process.env.VERSION || '1.0.0'}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`💻 Platform: ${process.platform}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
 });
-
 ```
 
-### ส่วนที่ 3: สร้าง Docker Configuration 
+---
+
+### ส่วนที่ 3: สร้าง Docker Configuration
 
 #### 3.1 สร้าง Dockerfile (Production-Ready)
 
-```yml
+**เปิดไฟล์ `Dockerfile` แล้ววางโค้ดนี้:**
+
+```dockerfile
 # ═══════════════════════════════════════════════════════════
 # Stage 1: Production Dependencies
 # ═══════════════════════════════════════════════════════════
@@ -319,7 +385,7 @@ FROM node:18-alpine AS production
 
 # Add metadata
 LABEL maintainer="your-email@example.com"
-LABEL description="Production Node.js Application"
+LABEL description="Production Node.js Application on Windows"
 LABEL version="1.0.0"
 
 # Install dumb-init for proper signal handling
@@ -363,7 +429,9 @@ CMD ["node", "server.js"]
 
 #### 3.2 สร้าง .dockerignore
 
-```yml
+**เปิดไฟล์ `.dockerignore` แล้ววางโค้ดนี้:**
+
+```
 # Dependencies
 node_modules
 npm-debug.log*
@@ -385,22 +453,28 @@ docker-compose*.yml
 
 # Documentation
 *.md
+README.md
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # IDE
 .vscode/
 .idea/
+*.swp
 
+# Windows specific
+$RECYCLE.BIN/
+*.lnk
 ```
 
 #### 3.3 สร้าง docker-compose.yml
 
-```yml
-#version: '3.8'
+**เปิดไฟล์ `docker-compose.yml` แล้ววางโค้ดนี้:**
 
+```yaml
 services:
   # ═══════════════════════════════════════════════════════════
   # Application Service
@@ -463,13 +537,13 @@ networks:
   selfhosted-network:
     driver: bridge
     name: selfhosted-network
-
 ```
 
 #### 3.4 สร้าง nginx.conf
 
-```bash
+**เปิดไฟล์ `nginx.conf` แล้ววางโค้ดนี้:**
 
+```nginx
 events {
     worker_connections 1024;
 }
@@ -533,13 +607,13 @@ http {
         }
     }
 }
-
 ```
 
 #### 3.5 สร้าง .gitignore
 
-```yml
+**เปิดไฟล์ `.gitignore` แล้ววางโค้ดนี้:**
 
+```
 # Dependencies
 node_modules/
 
@@ -555,9 +629,12 @@ npm-debug.log*
 .env.local
 .env.production
 
-# OS
+# OS - Windows specific
 .DS_Store
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
 
 # IDE
 .vscode/
@@ -566,10 +643,11 @@ Thumbs.db
 
 # Docker
 .docker/
-
 ```
 
 #### 3.6 ทดสอบ Build Local
+
+**ใช้ PowerShell หรือ Git Bash:**
 
 ```bash
 # ทดสอบ build Docker image
@@ -578,31 +656,55 @@ docker build -t nodejs-selfhosted-app:test .
 # ถ้า build สำเร็จ ให้ทดสอบรัน
 docker run --rm -p 3001:3000 nodejs-selfhosted-app:test
 
-# ทดสอบในหน้าต่าง terminal อื่น
+# ทดสอบในหน้าต่าง PowerShell/Git Bash อื่น
 curl http://localhost:3001
 curl http://localhost:3001/health
 
 # กด Ctrl+C เพื่อหยุด
 ```
 
+**ใช้ PowerShell (ถ้า curl ไม่มี):**
+```powershell
+Invoke-WebRequest http://localhost:3001 | Select-Object -ExpandProperty Content
+Invoke-WebRequest http://localhost:3001/health | Select-Object -ExpandProperty Content
+```
+
 **ผลลัพธ์ที่ควรเห็น:**
 ```json
 {
-  "message": "🚀 Hello from Self-Hosted CI/CD!",
+  "message": "🚀 Hello from Self-Hosted CI/CD on Windows!",
   "version": "1.0.0",
   "environment": "production",
+  "platform": "linux",
   "timestamp": "2024-12-23T10:30:00.000Z",
-  "deployment": "Pull-based Runner Architecture"
+  "deployment": "Pull-based Runner Architecture (Windows)"
 }
 ```
 
+---
+
 ### ส่วนที่ 4: สร้าง GitHub Actions Workflow
 
-#### 4.1 สร้าง Workflow File ที่ .github/workflows/deploy.yml
+#### 4.1 สร้าง Workflow File
 
-```yml
+**สร้างโฟลเดอร์และไฟล์:**
 
-name: 🚀 Deploy to Self-Hosted Server
+**PowerShell:**
+```powershell
+New-Item -ItemType Directory -Path .github\workflows -Force
+New-Item -ItemType File -Path .github\workflows\deploy.yml -Force
+```
+
+**Git Bash:**
+```bash
+mkdir -p .github/workflows
+touch .github/workflows/deploy.yml
+```
+
+#### 4.2 เปิดไฟล์ `.github/workflows/deploy.yml` แล้ววางโค้ดนี้:
+
+```yaml
+name: 🚀 Deploy to Self-Hosted Server (Windows)
 
 on:
   push:
@@ -629,6 +731,7 @@ jobs:
       # Step 2: Set Version
       # ================================================================
       - name: 🏷️ Set Version
+        shell: bash
         run: |
           echo "VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
           echo "📦 Deploying Version: 1.0.${{ github.run_number }}"
@@ -637,6 +740,7 @@ jobs:
       # Step 3: Display Environment Info
       # ================================================================
       - name: 📊 Display Environment
+        shell: bash
         run: |
           echo "════════════════════════════════════════"
           echo "🚀 Deployment Information"
@@ -649,7 +753,7 @@ jobs:
           echo "════════════════════════════════════════"
           echo ""
           echo "📋 System Information:"
-          echo "OS: $(uname -s)"
+          echo "OS: Windows (Self-Hosted Runner)"
           echo "Node: $(node --version)"
           echo "NPM: $(npm --version)"
           echo "Docker: $(docker --version)"
@@ -659,6 +763,7 @@ jobs:
       # Step 4: Verify Dependencies (Critical!)
       # ================================================================
       - name: 🔍 Verify package-lock.json
+        shell: bash
         run: |
           echo "🔍 Checking package-lock.json..."
           
@@ -678,6 +783,7 @@ jobs:
       # Step 5: Stop Existing Services
       # ================================================================
       - name: 🛑 Stop Existing Services
+        shell: bash
         run: |
           echo "🛑 Stopping existing services..."
           docker-compose down --remove-orphans || echo "No services to stop"
@@ -694,6 +800,7 @@ jobs:
       # Step 6: Build Docker Image
       # ================================================================
       - name: 🔨 Build Docker Image
+        shell: bash
         run: |
           echo "🔨 Building Docker image with npm ci..."
           
@@ -716,6 +823,7 @@ jobs:
       # Step 7: Start Services
       # ================================================================
       - name: 🚀 Start Services
+        shell: bash
         run: |
           echo "🚀 Starting services..."
           VERSION=${{ env.VERSION }} docker-compose up -d
@@ -727,6 +835,7 @@ jobs:
       # Step 8: Check Service Health
       # ================================================================
       - name: 🏥 Check Service Health
+        shell: bash
         run: |
           echo "🏥 Checking service health..."
           
@@ -776,6 +885,7 @@ jobs:
       # Step 9: Test Application
       # ================================================================
       - name: 🧪 Test Application
+        shell: bash
         run: |
           echo "🧪 Testing application endpoints..."
           
@@ -800,6 +910,7 @@ jobs:
       # Step 10: Display Status
       # ================================================================
       - name: 📊 Display Status
+        shell: bash
         run: |
           echo "════════════════════════════════════════"
           echo "📊 Deployment Status"
@@ -817,6 +928,7 @@ jobs:
       # ================================================================
       - name: 📝 Display Logs
         if: always()
+        shell: bash
         run: |
           echo "════════════════════════════════════════"
           echo "📝 Application Logs"
@@ -833,6 +945,7 @@ jobs:
       # ================================================================
       - name: 🎉 Deployment Summary
         if: success()
+        shell: bash
         run: |
           echo "════════════════════════════════════════"
           echo "✅ Deployment Successful!"
@@ -843,24 +956,41 @@ jobs:
           echo "📊 Info: http://localhost:8080/api/info"
           echo "📅 Deployed: $(date)"
           echo "👤 By: ${{ github.actor }}"
+          echo "💻 Platform: Windows (Self-Hosted)"
           echo "════════════════════════════════════════"
-
 ```
 
-### ส่วนที่ 5: Commit และ Push Code 
+**หมายเหตุสำคัญ:**
+- ✅ ใช้ `shell: bash` ในทุก step (จะใช้ Git Bash บน Windows)
+- ✅ Workflow จะรันบน Self-Hosted Runner ที่ติดตั้งบน Windows
+
+---
+
+### ส่วนที่ 5: Commit และ Push Code
+
+**ใช้ Git Bash หรือ PowerShell:**
 
 ```bash
 # เพิ่มไฟล์ทั้งหมด
 git add .
 
 # ตรวจสอบว่ามี package-lock.json
-git status | grep package-lock.json
+git status
+```
 
-# ควรเห็น:
-# new file:   package-lock.json
+**ควรเห็น:**
+```
+new file:   package-lock.json
+new file:   server.js
+new file:   package.json
+new file:   Dockerfile
+new file:   docker-compose.yml
+...
+```
 
+```bash
 # Commit
-git commit -m "Initial commit: Node.js app with CI/CD using Self-Hosted Runner"
+git commit -m "Initial commit: Node.js app with CI/CD on Windows Self-Hosted Runner"
 
 # Push
 git push origin main
@@ -868,7 +998,9 @@ git push origin main
 
 > ⚠️ **ตรวจสอบ:** ต้องแน่ใจว่า `package-lock.json` ถูก commit ด้วย!
 
-### ส่วนที่ 6: ติดตั้ง Self-Hosted Runner 
+---
+
+### ส่วนที่ 6: ติดตั้ง Self-Hosted Runner บน Windows
 
 #### 6.1 ไปที่ Repository Settings
 
@@ -879,59 +1011,55 @@ git push origin main
 
 #### 6.2 เลือก Operating System
 
-- **macOS**: สำหรับ Mac
-- **Linux**: สำหรับ Ubuntu/Debian
-- **Windows**: สำหรับ Windows
+เลือก **Windows** → เลือก Architecture **x64**
 
 #### 6.3 Download และติดตั้ง Runner
 
-**สำหรับ macOS:**
+**เปิด PowerShell (Run as Administrator)**
 
-```bash
+```powershell
 # สร้างโฟลเดอร์
-mkdir actions-runner && cd actions-runner
+New-Item -ItemType Directory -Path C:\actions-runner -Force
+Set-Location C:\actions-runner
 
-# Download (เปลี่ยน URL ตาม version ล่าสุดจาก GitHub)
-curl -o actions-runner-osx-x64-2.311.0.tar.gz -L \
-  https://github.com/actions/runner/releases/download/v2.311.0/actions-runner-osx-x64-2.311.0.tar.gz
+# Download Runner (ใช้ URL จาก GitHub Settings)
+# เปลี่ยน version ตามที่ GitHub แสดง
+Invoke-WebRequest -Uri "https://github.com/actions/runner/releases/download/v2.311.0/actions-runner-win-x64-2.311.0.zip" -OutFile "actions-runner-win-x64-2.311.0.zip"
 
 # Extract
-tar xzf ./actions-runner-osx-x64-2.311.0.tar.gz
+Expand-Archive -Path .\actions-runner-win-x64-2.311.0.zip -DestinationPath . -Force
 
-# Configure runner (ใช้คำสั่งจาก GitHub Settings)
-./config.sh --url https://github.com/YOUR_USERNAME/nodejs-cicd-selfhosted --token YOUR_TOKEN
-
-# ตอบคำถาม:
-# Enter the name of the runner group: [press Enter for default]
-# Enter the name of runner: my-macbook-runner
-# Enter any additional labels: [press Enter]
-# Enter name of work folder: [press Enter for _work]
+# Configure Runner
+# คัดลอกคำสั่งจาก GitHub Settings → Actions → Runners
+.\config.cmd --url https://github.com/YOUR_USERNAME/nodejs-cicd-selfhosted --token YOUR_TOKEN
 ```
 
-**สำหรับ Linux:**
+**ตอบคำถาม:**
+```
+Enter the name of the runner group: [press Enter for default]
+Enter the name of runner: my-windows-runner
+Enter any additional labels: [press Enter]
+Enter name of work folder: [press Enter for _work]
+```
 
-```bash
-mkdir actions-runner && cd actions-runner
+**ผลลัพธ์ที่ควรเห็น:**
+```
+√ Runner successfully added
+√ Runner connection is good
 
-curl -o actions-runner-linux-x64-2.311.0.tar.gz -L \
-  https://github.com/actions/runner/releases/download/v2.311.0/actions-runner-linux-x64-2.311.0.tar.gz
-
-tar xzf ./actions-runner-linux-x64-2.311.0.tar.gz
-
-./config.sh --url https://github.com/YOUR_USERNAME/nodejs-cicd-selfhosted --token YOUR_TOKEN
+# Settings Saved.
 ```
 
 #### 6.4 เริ่มต้น Runner
 
 **แบบ Interactive (สำหรับทดสอบ):**
 
-```bash
-# รันคำสั่ง เพื่อรันสคริปส์
-./run.sh
+```powershell
+# รันคำสั่ง
+.\run.cmd
 ```
 
 **ผลลัพธ์ที่ควรเห็น:**
-
 ```
 √ Connected to GitHub
 
@@ -939,96 +1067,91 @@ Current runner version: '2.311.0'
 2024-12-23 10:00:00Z: Listening for Jobs
 ```
 
-**แบบ Service (รันอัตโนมัติ):** 
-** ไม่ต้องทดลองในส่วนนี้ **
-```bash
+**แบบ Service (รันอัตโนมัติ):** ⭐ **แนะนำสำหรับ Production**
+
+**ต้อง Run PowerShell as Administrator:**
+
+```powershell
 # Install service
-sudo ./svc.sh install
+.\svc.cmd install
 
 # Start service
-sudo ./svc.sh start
+.\svc.cmd start
 
 # Check status
-sudo ./svc.sh status
+.\svc.cmd status
+```
 
+**ผลลัพธ์:**
+```
+Service actions.runner.YOUR_USERNAME-nodejs-cicd-selfhosted.my-windows-runner started successfully
+```
+
+**ดู Logs:**
+```powershell
 # View logs
-tail -f ~/actions-runner/_diag/Runner_*.log
+Get-Content -Path "_diag\Runner_*.log" -Wait -Tail 50
+```
+
+**Uninstall Service (ถ้าต้องการ):**
+```powershell
+.\svc.cmd stop
+.\svc.cmd uninstall
 ```
 
 #### 6.5 ตรวจสอบ Runner บน GitHub
 
 1. กลับไปที่ **Settings** → **Actions** → **Runners**
 2. ควรเห็น runner แสดงสถานะ **Idle** สีเขียว
+3. Label ควรมี: `self-hosted`, `Windows`, `X64`
 
-  ### บันทึกรูปผลการทดลอง
-  ```
-  บันทึกรูปหน้า Runners โดยคัดลอกให้เห็น Account ของ GitHub และ Repository
-  ```
-<img width="1910" height="966" alt="image" src="https://github.com/user-attachments/assets/e425e630-4d10-46ca-9dbd-9aa0bf353b71" />
+### บันทึกรูปผลการทดลอง
 
+```
+บันทึกรูปหน้า Runners โดยคัดลอกให้เห็น Account ของ GitHub และ Repository
+และแสดง Runner status เป็น "Idle" สีเขียว
+```
 
+---
 
 ### ส่วนที่ 7: ทดสอบ CI/CD Pipeline
 
 #### 7.1 แก้ไข server.js และ Push
 
+**เปิดไฟล์ `server.js` และแก้ไข message:**
+
 ```js
-
-const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(express.json());
-
 app.get('/', (req, res) => {
   res.json({
-    message: '🎉 Updated! Pull-based Runner Works!',
+    message: '🎉 Updated! Pull-based Runner on Windows Works!',
     version: process.env.VERSION || '1.0.0',
     environment: process.env.NODE_ENV || 'development',
+    platform: process.platform,
     timestamp: new Date().toISOString(),
-    architecture: 'Pull-based (Polling)',
+    architecture: 'Pull-based (Polling) on Windows',
     security: 'No inbound ports required'
   });
 });
-
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    uptime: Math.floor(process.uptime())
-  });
-});
-
-app.get('/api/info', (req, res) => {
-  res.json({
-    app: 'Node.js CI/CD Demo',
-    version: process.env.VERSION || '1.0.0',
-    node: process.version,
-    memory: {
-      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
-      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB'
-    }
-  });
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📦 Version: ${process.env.VERSION || '1.0.0'}`);
-});
 ```
 
-# Commit และ Push
+**Commit และ Push (Git Bash หรือ PowerShell):**
+
 ```bash
 git add server.js
-git commit -m "Update: Test CI/CD pipeline with pull-based runner"
+git commit -m "Update: Test CI/CD pipeline with Windows self-hosted runner"
 git push origin main
 ```
 
 #### 7.2 ติดตาม Deployment
 
-1. **ดู Runner Logs:**
-```bash
-cd ~/actions-runner
-tail -f _diag/Runner_*.log
+**1. ดู Runner Logs (PowerShell):**
+
+```powershell
+# ถ้ารันแบบ Interactive
+# ดูใน terminal ที่รัน .\run.cmd
+
+# ถ้ารันแบบ Service
+Get-Content -Path "C:\actions-runner\_diag\Runner_*.log" -Wait -Tail 100
 ```
 
 **ผลลัพธ์:**
@@ -1042,12 +1165,14 @@ tail -f _diag/Runner_*.log
 [2024-12-23 10:32:46] Polling for jobs...
 ```
 
-2. **ดูบน GitHub:**
-   - ไปที่ **Actions** tab
-   - คลิกที่ workflow run ล่าสุด
-   - ดู logs real-time
+**2. ดูบน GitHub:**
+- ไปที่ **Actions** tab
+- คลิกที่ workflow run ล่าสุด
+- ดู logs real-time
 
-3. **ทดสอบ Application:**
+**3. ทดสอบ Application (Git Bash หรือ PowerShell):**
+
+**Git Bash:**
 ```bash
 # ทดสอบ endpoint
 curl http://localhost:8080
@@ -1059,104 +1184,274 @@ docker ps
 docker logs nodejs-selfhosted-app
 ```
 
+**PowerShell:**
+```powershell
+# ทดสอบ endpoint
+Invoke-WebRequest http://localhost:8080 | Select-Object -ExpandProperty Content
+
+# ดู containers
+docker ps
+
+# ดู logs
+docker logs nodejs-selfhosted-app
+```
+
 ### บันทึกผลการรันคำสั่ง docker logs nodejs-selfhosted-app
+
 ```txt
 บันทึกรูปผลการรันคำสั่ง
 ```
-<img width="1919" height="996" alt="image" src="https://github.com/user-attachments/assets/a347955f-2c58-4989-91b5-54368033a40f" />
 
+---
 
-### ส่วนที่ 8: Monitoring และ Troubleshooting 
+### ส่วนที่ 8: Monitoring และ Troubleshooting
 
-#### 8.1 สร้าง Monitoring Script ชื่อ monitor.sh
+#### 8.1 สร้าง Monitoring Script (monitor.ps1)
 
-```bash
+**สร้างไฟล์ `monitor.ps1` ใน root project:**
 
-#!/bin/bash
+```powershell
+# monitor.ps1
+# CI/CD Deployment Monitor for Windows
 
-echo "════════════════════════════════════════"
-echo "🔍 CI/CD Deployment Monitor"
-echo "════════════════════════════════════════"
-echo ""
+Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "🔍 CI/CD Deployment Monitor (Windows)" -ForegroundColor White
+Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host ""
 
+# ═══════════════════════════════════════════════════════════
 # Check Runner Status
-echo "📊 Runner Status:"
-if pgrep -f "Runner.Listener" > /dev/null; then
-  echo "  ✅ Runner: Running"
-else
-  echo "  ❌ Runner: Not Running"
-fi
+# ═══════════════════════════════════════════════════════════
+Write-Host "📊 Runner Status:" -ForegroundColor Yellow
 
-echo ""
+try {
+    $runnerProcess = Get-Process | Where-Object { 
+        $_.ProcessName -like "*Runner.Listener*" -or 
+        $_.ProcessName -like "*Runner.Worker*" 
+    }
+    
+    if ($runnerProcess) {
+        Write-Host "  ✅ Runner: " -NoNewline -ForegroundColor Green
+        Write-Host "Running" -ForegroundColor White
+        
+        # แสดงรายละเอียด process
+        foreach ($proc in $runnerProcess) {
+            $cpuUsage = [math]::Round($proc.CPU, 2)
+            $memoryMB = [math]::Round($proc.WorkingSet / 1MB, 2)
+            Write-Host "     PID: $($proc.Id), CPU: $cpuUsage s, Memory: $memoryMB MB" -ForegroundColor Gray
+        }
+    } else {
+        Write-Host "  ❌ Runner: " -NoNewline -ForegroundColor Red
+        Write-Host "Not Running" -ForegroundColor White
+        Write-Host "     Hint: Run '.\run.cmd' in C:\actions-runner" -ForegroundColor Gray
+    }
+} catch {
+    Write-Host "  ⚠️  Error checking Runner: $($_.Exception.Message)" -ForegroundColor Yellow
+}
 
-# Check Containers
-echo "🐳 Container Status:"
-if docker ps | grep -q nodejs-selfhosted-app; then
-  echo "  ✅ App: Running"
-  docker ps --filter name=nodejs-selfhosted-app --format "     Uptime: {{.Status}}"
-else
-  echo "  ❌ App: Not Running"
-fi
+Write-Host ""
 
-if docker ps | grep -q nginx-selfhosted-proxy; then
-  echo "  ✅ Nginx: Running"
-  docker ps --filter name=nginx-selfhosted-proxy --format "     Uptime: {{.Status}}"
-else
-  echo "  ❌ Nginx: Not Running"
-fi
+# ═══════════════════════════════════════════════════════════
+# Check Docker Containers
+# ═══════════════════════════════════════════════════════════
+Write-Host "🐳 Container Status:" -ForegroundColor Yellow
 
-echo ""
+# Check App Container
+try {
+    $appContainer = docker ps --filter "name=nodejs-selfhosted-app" --format "{{.Names}}" 2>$null
+    
+    if ($appContainer) {
+        Write-Host "  ✅ App: " -NoNewline -ForegroundColor Green
+        Write-Host "Running" -ForegroundColor White
+        
+        $appStatus = docker ps --filter "name=nodejs-selfhosted-app" --format "{{.Status}}" 2>$null
+        Write-Host "     Uptime: $appStatus" -ForegroundColor Gray
+        
+        # Check health
+        $appHealth = docker inspect nodejs-selfhosted-app --format "{{.State.Health.Status}}" 2>$null
+        if ($appHealth) {
+            $healthColor = if ($appHealth -eq "healthy") { "Green" } else { "Yellow" }
+            Write-Host "     Health: $appHealth" -ForegroundColor $healthColor
+        }
+    } else {
+        Write-Host "  ❌ App: " -NoNewline -ForegroundColor Red
+        Write-Host "Not Running" -ForegroundColor White
+        Write-Host "     Hint: Run 'docker-compose up -d'" -ForegroundColor Gray
+    }
+} catch {
+    Write-Host "  ⚠️  Error checking App container: $($_.Exception.Message)" -ForegroundColor Yellow
+}
 
+# Check Nginx Container
+try {
+    $nginxContainer = docker ps --filter "name=nginx-selfhosted-proxy" --format "{{.Names}}" 2>$null
+    
+    if ($nginxContainer) {
+        Write-Host "  ✅ Nginx: " -NoNewline -ForegroundColor Green
+        Write-Host "Running" -ForegroundColor White
+        
+        $nginxStatus = docker ps --filter "name=nginx-selfhosted-proxy" --format "{{.Status}}" 2>$null
+        Write-Host "     Uptime: $nginxStatus" -ForegroundColor Gray
+    } else {
+        Write-Host "  ❌ Nginx: " -NoNewline -ForegroundColor Red
+        Write-Host "Not Running" -ForegroundColor White
+    }
+} catch {
+    Write-Host "  ⚠️  Error checking Nginx container: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
+Write-Host ""
+
+# ═══════════════════════════════════════════════════════════
 # Check Endpoints
-echo "🌐 Endpoint Status:"
-HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health 2>/dev/null)
-if [ "$HEALTH" = "200" ]; then
-  echo "  ✅ Health: $HEALTH"
-else
-  echo "  ❌ Health: $HEALTH"
-fi
+# ═══════════════════════════════════════════════════════════
+Write-Host "🌐 Endpoint Status:" -ForegroundColor Yellow
 
-ROOT=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ 2>/dev/null)
-if [ "$ROOT" = "200" ]; then
-  echo "  ✅ Root: $ROOT"
-else
-  echo "  ❌ Root: $ROOT"
-fi
+# Health Endpoint
+try {
+    $healthResponse = Invoke-WebRequest -Uri "http://localhost:8080/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+    
+    if ($healthResponse.StatusCode -eq 200) {
+        Write-Host "  ✅ Health: " -NoNewline -ForegroundColor Green
+        Write-Host "$($healthResponse.StatusCode)" -ForegroundColor White
+        
+        # Parse JSON response
+        $healthContent = $healthResponse.Content | ConvertFrom-Json
+        if ($healthContent.status) {
+            Write-Host "     Status: $($healthContent.status)" -ForegroundColor Gray
+        }
+        if ($healthContent.uptime) {
+            Write-Host "     Uptime: $($healthContent.uptime) seconds" -ForegroundColor Gray
+        }
+    } else {
+        Write-Host "  ⚠️  Health: " -NoNewline -ForegroundColor Yellow
+        Write-Host "$($healthResponse.StatusCode)" -ForegroundColor White
+    }
+} catch {
+    Write-Host "  ❌ Health: " -NoNewline -ForegroundColor Red
+    Write-Host "Connection Failed" -ForegroundColor White
+}
 
-echo ""
+# Root Endpoint
+try {
+    $rootResponse = Invoke-WebRequest -Uri "http://localhost:8080/" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+    
+    if ($rootResponse.StatusCode -eq 200) {
+        Write-Host "  ✅ Root: " -NoNewline -ForegroundColor Green
+        Write-Host "$($rootResponse.StatusCode)" -ForegroundColor White
+        
+        # Parse JSON response
+        $rootContent = $rootResponse.Content | ConvertFrom-Json
+        if ($rootContent.version) {
+            Write-Host "     Version: $($rootContent.version)" -ForegroundColor Gray
+        }
+        if ($rootContent.message) {
+            Write-Host "     Message: $($rootContent.message)" -ForegroundColor Gray
+        }
+    } else {
+        Write-Host "  ⚠️  Root: " -NoNewline -ForegroundColor Yellow
+        Write-Host "$($rootResponse.StatusCode)" -ForegroundColor White
+    }
+} catch {
+    Write-Host "  ❌ Root: " -NoNewline -ForegroundColor Red
+    Write-Host "Connection Failed" -ForegroundColor White
+}
 
+Write-Host ""
+
+# ═══════════════════════════════════════════════════════════
 # Resource Usage
-echo "💾 Resource Usage:"
-docker stats --no-stream --format "  {{.Container}}: CPU {{.CPUPerc}}, Memory {{.MemUsage}}"
+# ═══════════════════════════════════════════════════════════
+Write-Host "💾 Resource Usage:" -ForegroundColor Yellow
 
-echo ""
-echo "════════════════════════════════════════"
-```
-**กำหนดให้ monitor.sh สามารถรันได้**
-```bash
-chmod +x monitor.sh
+try {
+    $dockerStats = docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" 2>$null
+    
+    if ($dockerStats) {
+        $dockerStats | ForEach-Object {
+            Write-Host "  $_" -ForegroundColor White
+        }
+    } else {
+        Write-Host "  No containers running" -ForegroundColor Gray
+    }
+} catch {
+    Write-Host "  ⚠️  Error getting Docker stats: $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
+Write-Host ""
+
+# ═══════════════════════════════════════════════════════════
+# System Information
+# ═══════════════════════════════════════════════════════════
+Write-Host "💻 System Information:" -ForegroundColor Yellow
+
+# Docker Version
+try {
+    $dockerVersion = docker version --format "{{.Server.Version}}" 2>$null
+    Write-Host "  Docker: v$dockerVersion" -ForegroundColor White
+} catch {
+    Write-Host "  Docker: Not installed or not running" -ForegroundColor Red
+}
+
+# Node.js Version
+try {
+    $nodeVersion = node --version 2>$null
+    Write-Host "  Node.js: $nodeVersion" -ForegroundColor White
+} catch {
+    Write-Host "  Node.js: Not installed" -ForegroundColor Red
+}
+
+# NPM Version
+try {
+    $npmVersion = npm --version 2>$null
+    Write-Host "  NPM: v$npmVersion" -ForegroundColor White
+} catch {
+    Write-Host "  NPM: Not installed" -ForegroundColor Red
+}
+
+# Windows Version
+$windowsVersion = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName
+Write-Host "  OS: $windowsVersion" -ForegroundColor White
+
+Write-Host ""
+Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "Last updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
+Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
 ```
 
 #### 8.2 ใช้ Monitoring Script
 
-```bash
+**PowerShell:**
+
+```powershell
 # Run once
-./monitor.sh
+.\monitor.ps1
 
 # Run continuously (every 10 seconds)
-watch -n 10 ./monitor.sh
+while ($true) {
+  Clear-Host
+  .\monitor.ps1
+  Start-Sleep -Seconds 10
+}
 ```
-### บันทึกผลการรัน monitor.sh
+
+**หมายเหตุ:** ถ้า PowerShell บอกว่า execution policy ไม่อนุญาต:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### บันทึกผลการรัน monitor.ps1
+
 ```txt
 บันทึกรูปผลการรันคำสั่ง
 ```
 
-<img width="1919" height="992" alt="image" src="https://github.com/user-attachments/assets/2430bcea-d36b-4c75-b335-5a933bce41a6" />
+---
 
+## 🎯 สรุปจุดสำคัญ
 
-## สรุปจุดสำคัญ
-
-### ✅ ข้อสำคัญสำหรับ Production
+### ✅ ข้อสำคัญสำหรับ Production บน Windows
 
 1. **ต้องมี package-lock.json**
    - ใช้ `npm ci` แทน `npm install`
@@ -1180,14 +1475,89 @@ watch -n 10 ./monitor.sh
    - Runner เป็นฝ่าย poll
    - ไม่ต้องเปิด port
    - ปลอดภัยกว่า push-based
+   - ทำงานได้ดีบน Windows
 
-### ❌ สิ่งที่ต้องหลีกเลี่ยง
+6. **ใช้ Git Bash**
+   - รัน workflow steps ด้วย `shell: bash`
+   - เข้ากันได้กับ Linux commands
+   - ง่ายกว่าการแปลงเป็น PowerShell ทั้งหมด
+
+### ❌ สิ่งที่ต้องหลีกเลี่ยงบน Windows
 
 1. ❌ ไม่ใช้ Self-Hosted Runner กับ Public Repository
 2. ❌ ไม่ ignore `package-lock.json` ใน `.gitignore`
 3. ❌ ไม่ใช้ `npm install --production` ใน Dockerfile
-4. ❌ ไม่รัน runner ด้วย root user
+4. ❌ ไม่รัน runner ด้วย admin account เสมอ
 5. ❌ ไม่ hard-code secrets ในโค้ด
+6. ❌ ไม่ลืมติดตั้ง Git Bash (จาก Git for Windows)
+
+### 🪟 เฉพาะสำหรับ Windows
+
+1. ✅ ติดตั้ง Git for Windows (รวม Git Bash)
+2. ✅ ใช้ PowerShell 7+ หรือ Windows PowerShell
+3. ✅ Enable Docker Desktop WSL 2 backend
+4. ✅ รัน Runner เป็น Windows Service
+5. ✅ ใช้ monitor.ps1 แทน monitor.sh
+6. ✅ ตรวจสอบ Windows Firewall settings
+
+---
+
+## 💡 Troubleshooting บน Windows
+
+### ปัญหา 1: Runner ไม่ start
+
+**Solution:**
+```powershell
+# ตรวจสอบ service
+.\svc.cmd status
+
+# ดู logs
+Get-Content -Path "_diag\Runner_*.log" -Tail 100
+
+# Restart service
+.\svc.cmd stop
+.\svc.cmd start
+```
+
+### ปัญหา 2: Docker Desktop ไม่ทำงาน
+
+**Solution:**
+1. เปิด Docker Desktop
+2. ตรวจสอบว่า WSL 2 backend enabled
+3. รัน PowerShell as Administrator:
+   ```powershell
+   docker ps
+   ```
+
+### ปัญหา 3: PowerShell ไม่ให้รัน scripts
+
+**Solution:**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### ปัญหา 4: Git Bash ไม่เจอ
+
+**Solution:**
+- ติดตั้ง Git for Windows: https://git-scm.com/download/win
+- ตรวจสอบว่า Git Bash ถูกติดตั้ง
+- เพิ่ม Git Bash ใน PATH
+
+### ปัญหา 5: Port 8080 ถูกใช้งานแล้ว
+
+**Solution:**
+```powershell
+# ดูว่า process ไหนใช้ port 8080
+netstat -ano | findstr :8080
+
+# ปิด process (ใส่ PID จากคำสั่งด้านบน)
+taskkill /PID <PID> /F
+
+# หรือเปลี่ยน port ใน docker-compose.yml
+# "8081:80" แทน "8080:80"
+```
+
+---
 
 ## คำถามท้ายบท
 
@@ -1196,8 +1566,7 @@ watch -n 10 ./monitor.sh
 <details>
 <summary>คำตอบ</summary>
 
- เขียนคำตอบลงในช่องนี้
-
+เขียนคำตอบลงในช่องนี้
 
 </details>
 
@@ -1206,8 +1575,7 @@ watch -n 10 ./monitor.sh
 <details>
 <summary>คำตอบ</summary>
 
- เขียนคำตอบลงในช่องนี้
-
+เขียนคำตอบลงในช่องนี้
 
 </details>
 
@@ -1216,8 +1584,7 @@ watch -n 10 ./monitor.sh
 <details>
 <summary>คำตอบ</summary>
 
- เขียนคำตอบลงในช่องนี้
-
+เขียนคำตอบลงในช่องนี้
 
 </details>
 
@@ -1226,25 +1593,55 @@ watch -n 10 ./monitor.sh
 <details>
 <summary>คำตอบ</summary>
 
- เขียนคำตอบลงในช่องนี้
-
+เขียนคำตอบลงในช่องนี้
 
 </details>
 
+### 5. Nginx คืออะไร และการทำ Reverse Proxy ใน Nginx มีความสำคัญอย่างไร
 
-### 5. Nginx คืออะไร และการทำ Revers Proxy ใน Nginx มีความสำคัญอย่างไร
 <details>
 <summary>คำตอบ</summary>
 
- เขียนคำตอบลงในช่องนี้
-
+เขียนคำตอบลงในช่องนี้
 
 </details>
+
+### 6. ความแตกต่างระหว่างการรัน Runner บน Windows และ Linux คืออะไร
+
+<details>
+<summary>คำตอบ</summary>
+
+เขียนคำตอบลงในช่องนี้
+
+</details>
+
 ---
 
-## เอกสารอ้างอิง
+## 📚 เอกสารอ้างอิง
 
 - [GitHub Actions Self-Hosted Runners](https://docs.github.com/en/actions/hosting-your-own-runners)
+- [Self-Hosted Runner on Windows](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners#requirements-for-self-hosted-runner-machines)
 - [npm ci Documentation](https://docs.npmjs.com/cli/v10/commands/npm-ci)
 - [Docker Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/)
 - [Nginx Reverse Proxy Guide](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/)
+- [Git for Windows](https://git-scm.com/download/win)
+- [PowerShell Documentation](https://learn.microsoft.com/en-us/powershell/)
+- [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/)
+
+---
+
+## 🎓 สิ่งที่ได้เรียนรู้
+
+เมื่อทำใบงานนี้จนเสร็จ คุณจะได้เรียนรู้:
+
+✅ วิธีติดตั้ง Self-Hosted Runner บน Windows
+✅ การใช้ Git Bash บน Windows สำหรับ CI/CD
+✅ การสร้าง CI/CD Pipeline ด้วย GitHub Actions
+✅ การ Deploy แอปพลิเคชันด้วย Docker บน Windows
+✅ การตั้งค่า Nginx Reverse Proxy
+✅ การ Monitor และ Troubleshoot บน Windows
+✅ ความแตกต่างระหว่าง Windows และ Linux ใน DevOps
+
+---
+
+**🎉 ขอให้สนุกกับการเรียนรู้!**
